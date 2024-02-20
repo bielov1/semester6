@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "config.h"
 #include "allocator.h"
+#include "kernel.h"
 #include "allocator_impl.h"
 #include <stdbool.h>
 #include "block.h"
@@ -13,7 +14,7 @@ int main() {
 
     for (int i = 0; i < BLOCK_QUANTITY; i++) {
         size_t size = ALLOCATOR_PAGE_SIZE;
-        Block* nb = malloc(size);
+        Block* nb = memalloc(size);
         if (i == 0) {
             set_size_curr(nb, size);
             set_size_prev(nb, 0);
@@ -40,7 +41,7 @@ int main() {
 
     }
 
-    //mem_free(arena.blocks_link[0]);
+    mem_free(arena.blocks_link[0]);
     mem_show(&arena);
 
     return 0;

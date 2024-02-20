@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -pedantic
 
-SRC = main.c allocator.c block.c  kernel.c
+SRC = main.c allocator.c block.c kernel.c
 
 .PHONY: run clean
 

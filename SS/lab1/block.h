@@ -5,6 +5,9 @@
 #include "kernel.h"
 #include <stdlib.h>
 
+
+//TODO: implement function for releasing flag_busy bit in block`s size_curr --- DONE
+
 #define BLOCK_OCCUPIED (1 << 0)
 #define BLOCK_LAST (1 << 1)
 #define BLOCK_FIRST (1 << 2)
@@ -57,6 +60,10 @@ static inline void set_size_prev(Block* b, size_t size) {
 
 static inline void set_flag_busy(Block* b) {
     b->size_curr |= BLOCK_OCCUPIED;
+}
+
+static inline void release_flag_busy(Block* b) {
+    b->size_curr &= ~BLOCK_OCCUPIED;
 }
 
 static inline void set_first_block(Block* b) {

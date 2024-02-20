@@ -39,7 +39,8 @@ void mem_show(Arena* arena) {
 void mem_free(Block* b) {
     if (b == NULL) return;
 
-    set_flag_busy(b);
-    set_size_curr(b, 0);
-    set_size_prev(b, 0);
+    //printf("Before freeing: flag_busy = %d;\n", get_flag_busy(b));
+    release_flag_busy(b);
+    //printf("After freeing: flag_busy = %d;\n", get_flag_busy(b));
+
 }
