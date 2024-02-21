@@ -3,6 +3,8 @@
 
 
 #include "block.h"
+#include <sys/mman.h>
+#include <stdint.h>
 
 void* memalloc(size_t size);
 

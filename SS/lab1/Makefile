@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -pedantic
+CFLAGS = -Wall -Wextra -pedantic
 
 SRC = main.c allocator.c block.c kernel.c
 

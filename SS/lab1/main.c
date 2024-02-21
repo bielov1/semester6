@@ -5,6 +5,7 @@
 #include "kernel.h"
 #include "allocator_impl.h"
 #include <stdbool.h>
+#include <sys/mman.h>
 #include "block.h"
 
 int main() {
@@ -14,7 +15,11 @@ int main() {
 
     for (int i = 0; i < BLOCK_QUANTITY; i++) {
         size_t size = ALLOCATOR_PAGE_SIZE;
-        Block* nb = memalloc(size);
+        Block* nb = (Block*)memalloc(size);
+        if (nb == MAP_FAILED) {
+            printf("mmap() crashed");
+            return 1;
+        }
         if (i == 0) {
             set_size_curr(nb, size);
             set_size_prev(nb, 0);
@@ -41,8 +46,11 @@ int main() {
 
     }
 
-    mem_free(arena.blocks_link[0]);
+    mem_free(&arena, arena.blocks_link[0], ALLOCATOR_PAGE_SIZE);
+    //mem_free(&arena, arena.blocks_link[3], ALLOCATOR_PAGE_SIZE);
+    //mem_free(&arena, arena.blocks_link[12], ALLOCATOR_PAGE_SIZE);
     mem_show(&arena);
+
 
     return 0;
 }

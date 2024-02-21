@@ -4,28 +4,27 @@
 #include "kernel.h"
 
 void block_split(Block* a, int p) {
-    // if (p < 1 || a == NULL) return;
+    if (p < 1 || a == NULL) return;
 
-    // Block* ptr_next = a->next;
-    // Block* x = a;
-    // size_t size = x->size_curr/p;
+    Block* ptr_next = a->next;
+    Block* x = a;
+    size_t size = x->size_curr/p;
 
-    // for (int i = 0; i < p; i++) {
-    //     Block* nb = (Block*)memalloc(size);
-    //     nb->size_curr = size;
-    //     if (i == 0 && x->first_Block) {
-    //         nb->size_prev = 0;
-    //     } else {
-    //         nb->size_prev = x->size_curr;
-    //     }
+    for (int i = 0; i < p; i++) {
+        Block* nb = (Block*)memalloc(size);
+        nb->size_curr = size;
+        if (i == 0 && get_first_block(x)) {
+            nb->size_prev = 0;
+        } else {
+            nb->size_prev = x->size_curr;
+        }
 
-    //     x->next = nb;
-    //     x = nb;;
+        x->next = nb;
+        x = nb;
+    }
 
-    // }
-
-    // if (!a->last_Block) x->next = ptr;
-    // free(a);
+    if (!get_last_block(a)) x->next = ptr;
+    mem_free(a);
 }
 
 void block_merge(Block* a) {

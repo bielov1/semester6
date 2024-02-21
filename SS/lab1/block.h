@@ -14,7 +14,7 @@
 
 #define SIZE_MASK (~(BLOCK_OCCUPIED | BLOCK_LAST | BLOCK_FIRST))
 
-typedef struct Block{
+typedef struct Block {
     size_t size_curr;
     size_t size_prev;
     //bool flag_busy;
