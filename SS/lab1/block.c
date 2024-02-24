@@ -1,43 +1,49 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "block.h"
 #include "kernel.h"
 
-void block_split(Block* a, int p) {
-    if (p < 1 || a == NULL) return;
+void block_split(Block* block, size_t size) {
+    size_t size_rest = get_size_curr(block) - size;
+    if (size_rest >= BLOCK_STRUCT_SIZE) {
+        size_rest -= BLOCK_STRUCT_SIZE;
 
-    Block* ptr_next = a->next;
-    Block* x = a;
-    size_t size = x->size_curr/p;
+        bool is_first = get_first_block(block);
+        bool is_last = get_last_block(block);
 
-    for (int i = 0; i < p; i++) {
-        Block* nb = (Block*)memalloc(size);
-        nb->size_curr = size;
-        if (i == 0 && get_first_block(x)) {
-            nb->size_prev = 0;
-        } else {
-            nb->size_prev = x->size_curr;
+        set_size_curr(block, size);
+        if (is_first) {
+            set_first_block(block);
         }
 
-        x->next = nb;
-        x = nb;
+        Block* block_r = block_next(block);
+        set_size_curr(block_r, size_rest);
+        set_size_prev(block_r, size);
+
+        if (is_last) {
+            clr_last_block(block);
+            set_last_block(block_r);
+        }
+
+        set_flag_busy(block);
+    }
+}
+void block_merge(Block* block, Block* block_r) {
+    size_t size;
+
+    bool is_first = get_first_block(block);
+
+    size = get_size_curr(block) + get_size_curr(block_r) + BLOCK_STRUCT_SIZE;
+
+    set_size_curr(block, size);
+    if (is_first) {
+        set_first_block(block);
     }
 
-    if (!get_last_block(a)) x->next = ptr;
-    mem_free(a);
-}
-
-void block_merge(Block* a) {
-    // if (a == NULL || a->last_Block ||a->last_Block) return;
-
-    // Block* right_neighbor = a->next;
-
-    // if (right_neighbor->next) {
-    //     a->next = right_neighbor->next;
-    // } else {
-    //     a->next = NULL;
-    // }
-    // a->size_curr += right_neighbor->size_curr;
-
-    // free(right_neighbor);
+    if (get_last_block(block_r)) {
+        set_last_block(block);
+    } else {
+        set_size_prev(block_next(block_r), size);
+    }
 }

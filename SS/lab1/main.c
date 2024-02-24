@@ -1,56 +1,45 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+
 #include "config.h"
 #include "allocator.h"
 #include "kernel.h"
 #include "allocator_impl.h"
-#include <stdbool.h>
-#include <sys/mman.h>
 #include "block.h"
+#include "tester.h"
+
+static void* buf_alloc(size_t size) {
+    char *buf;
+
+    buf = mem_alloc(size);
+    if (buf != NULL) {
+        for (size_t i = 0; i < size; ++i) {
+            buf[i] = (char)rand();
+        }
+    }
+    return buf;
+}
 
 int main() {
-    Arena arena;
-    arena.size = DEF_ARENA_SIZE;
-    arena.used = 0;
+    void* ptr1, *ptr2, *ptr3, *ptr4, *ptr5, *ptr6;
 
-    for (int i = 0; i < BLOCK_QUANTITY; i++) {
-        size_t size = ALLOCATOR_PAGE_SIZE;
-        Block* nb = (Block*)memalloc(size);
-        if (nb == MAP_FAILED) {
-            printf("mmap() crashed");
-            return 1;
-        }
-        if (i == 0) {
-            set_size_curr(nb, size);
-            set_size_prev(nb, 0);
-        } else {
-            set_size_curr(nb, size);
-            set_size_prev(nb, size);
-        }
-        arena.blocks_link[i] = nb;
-    }
+    buf_alloc(SIZE_MAX);
+    mem_show("Initial");
 
-    for (int i = 0; i < BLOCK_QUANTITY; i++) {
-        Block* b = mem_alloc(&arena, ALLOCATOR_PAGE_SIZE);
-        if (b == NULL) {
-            continue;
-        }
-
-        if (i == 0) {
-            set_first_block(b);
-        }
-
-        if (i == BLOCK_QUANTITY-1) {
-            set_last_block(b);
-        }
-
-    }
-
-    mem_free(&arena, arena.blocks_link[0], ALLOCATOR_PAGE_SIZE);
-    //mem_free(&arena, arena.blocks_link[3], ALLOCATOR_PAGE_SIZE);
-    //mem_free(&arena, arena.blocks_link[12], ALLOCATOR_PAGE_SIZE);
-    mem_show(&arena);
-
-
-    return 0;
+    ptr1 = buf_alloc(256);
+    mem_show("alloc(256)");
+    ptr2 = buf_alloc(344);
+    mem_show("alloc(344)");
+    ptr3 = mem_realloc(ptr1, 257);
+    mem_show("realloc(ptr1 -> 257)");
+    ptr4 = buf_alloc(40);
+    mem_show("alloc(40)");
+    ptr5 = buf_alloc(300);
+    mem_show("alloc(300)");
+    ptr6 = mem_realloc(ptr4, 120);
+    mem_show("realloc(ptr4 -> 120)");
+    //srand((unsigned int)time(NULL));
+    //tester(true);
 }
