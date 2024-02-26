@@ -9,6 +9,7 @@
 #include "allocator_impl.h"
 #include "block.h"
 #include "tester.h"
+#include "tree.h"
 
 static void* buf_alloc(size_t size) {
     char *buf;
@@ -23,6 +24,7 @@ static void* buf_alloc(size_t size) {
 }
 
 int main() {
+    block_tree_type tree = TREE_INITIALIZER;
     void* ptr1, *ptr2, *ptr3, *ptr4, *ptr5, *ptr6;
 
     buf_alloc(SIZE_MAX);

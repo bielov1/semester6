@@ -1,7 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -pedantic -ggdb
 
-SRC = main.c allocator.c block.c kernel.c tester.c
+
+SRC = main.c allocator.c block.c kernel.c tester.c ./avl/avl.c
 
 .PHONY: run clean
 
