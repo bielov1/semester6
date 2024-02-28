@@ -2,10 +2,11 @@
 #define BLOCK_H
 
 #include <stdbool.h>
-#include "kernel.h"
-#include "allocator_impl.h"
 #include <stdlib.h>
 
+#include "kernel.h"
+#include "allocator_impl.h"
+#include "tree.h"
 
 //TODO: implement function for releasing flag_busy bit in block`s size_curr --- DONE
 
@@ -15,19 +16,21 @@
 
 #define SIZE_MASK (~(BLOCK_OCCUPIED | BLOCK_LAST | BLOCK_FIRST))
 
+
 typedef struct Block {
     size_t size_curr;
     size_t size_prev;
+    block_node_t *node;
 } Block;
 
 void block_split(Block* block, size_t aligned_size);
 void block_merge(Block* block, Block* block_r);
 
-static inline char* block_to_payload(const Block *block) {
+static inline char* block_to_payload(Block *block) {
     return (char*)block + BLOCK_STRUCT_SIZE;
 }
 
-static inline Block* payload_to_block(const void *ptr) {
+static inline Block* payload_to_block(void *ptr) {
     return (Block*)((char*)ptr - BLOCK_STRUCT_SIZE);
 }
 
@@ -92,11 +95,22 @@ static inline void clr_last_block(Block* b) {
     b->size_curr &= ~BLOCK_LAST;
 }
 
-static inline void initArena(Block* b, size_t size) {
+static inline void initArena(block_tree_t* tree, Block* b, size_t size) {
+    tree_add(tree, &(b->node), size);
     set_size_curr(b, size);
     set_size_prev(b, 0);
     set_first_block(b);
     set_last_block(b);
+}
+
+//FINALLY WORKS!
+
+static inline block_node_t* block_to_node(Block* b) {
+    return (block_node_t*)((char*)block_to_payload(b) - NODE_STRUCT_SIZE);
+}
+
+static inline Block* node_to_block(void* node) {
+    return (Block*)((char*)payload_to_block(node) + NODE_STRUCT_SIZE);
 }
 
 #endif

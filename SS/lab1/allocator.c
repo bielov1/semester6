@@ -10,11 +10,12 @@
 #define BLOCK_SIZE_MAX (ARENA_SIZE - BLOCK_STRUCT_SIZE)
 
 static Block* Arena = NULL;
+static block_tree_t tree = TREE_INITIALIZER;
 
 static int arena_alloc(void) {
     Arena = kernel_alloc(ARENA_SIZE);
     if (Arena != NULL) {
-        initArena(Arena, ARENA_SIZE - BLOCK_STRUCT_SIZE);
+        initArena(&tree, Arena, ARENA_SIZE - BLOCK_STRUCT_SIZE);
         return 0;
     }
     return -1;
@@ -31,21 +32,25 @@ void* mem_alloc(size_t size) {
     if (size > BLOCK_SIZE_MAX) return NULL;
 
     size_t aligned_size = ROUND_BYTES(size);
-    for (block = Arena ;; block = block_next(block)) {
-        if (!get_flag_busy(block) && get_size_curr(block) >= aligned_size) {
-            block_split(block, aligned_size);
-            return block_to_payload(block);
-        }
-        if (get_last_block(block)) break;
-    }
-
+    // for (block = Arena ;; block = block_next(block)) {
+    //     if (!get_flag_busy(block) && get_size_curr(block) >= aligned_size) {
+    //         block_split(block, aligned_size);
+    //         return block_to_payload(block);
+    //     }
+    //     if (get_last_block(block)) break;
+    // }
+    block_node_t *node = tree_find_best(&tree, aligned_size);
+    block_node_t *node_r = block_to_node(Arena);
+    printf("Arena to node - %p\n", (char*)Arena + BLOCK_STRUCT_SIZE - 16);
+    printf("2Arena to node - %p\n", node_r);
+    block = node_to_block(node);
+    printf("node to Arena - %p\n", (char*)node - BLOCK_STRUCT_SIZE + 16);
+    printf("2node to Arena - %p\n", block);
     return NULL;
 }
 
-
 void mem_show(const char *msg) {
     Block* block;
-
     printf("%s:\n", msg);
     if (Arena == NULL) {
         printf("Arena was not created\n");

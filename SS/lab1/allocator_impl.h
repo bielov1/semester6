@@ -7,3 +7,4 @@
 #define ROUND_BYTES(s) (((s) + (ALIGN - 1)) & ~(ALIGN-1))
 
 #define BLOCK_STRUCT_SIZE ROUND_BYTES(sizeof(Block))
+#define NODE_STRUCT_SIZE (sizeof(Block) - sizeof(block_tree_t))

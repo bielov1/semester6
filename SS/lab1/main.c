@@ -24,24 +24,23 @@ static void* buf_alloc(size_t size) {
 }
 
 int main() {
-    block_tree_type tree = TREE_INITIALIZER;
-    void* ptr1, *ptr2, *ptr3, *ptr4, *ptr5, *ptr6;
+    // block_tree_t tree = TREE_INITIALIZER;
+    // void* ptr1, *ptr2, *ptr3, *ptr4, *ptr5, *ptr6;
 
+    void* ptr1, *ptr2;
     buf_alloc(SIZE_MAX);
     mem_show("Initial");
 
     ptr1 = buf_alloc(256);
     mem_show("alloc(256)");
-    ptr2 = buf_alloc(344);
-    mem_show("alloc(344)");
-    ptr3 = mem_realloc(ptr1, 257);
-    mem_show("realloc(ptr1 -> 257)");
-    ptr4 = buf_alloc(40);
-    mem_show("alloc(40)");
-    ptr5 = buf_alloc(300);
-    mem_show("alloc(300)");
-    ptr6 = mem_realloc(ptr4, 120);
-    mem_show("realloc(ptr4 -> 120)");
+    // ptr3 = mem_realloc(ptr1, 257);
+    // mem_show("realloc(ptr1 -> 257)");
+    // ptr4 = buf_alloc(40);
+    // mem_show("alloc(40)");
+    // ptr5 = buf_alloc(300);
+    // mem_show("alloc(300)");
+    // ptr6 = mem_realloc(ptr4, 120);
+    // mem_show("realloc(ptr4 -> 120)");
     //srand((unsigned int)time(NULL));
     //tester(true);
 }
