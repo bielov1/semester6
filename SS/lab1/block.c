@@ -1,49 +1,56 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
+
 #include "block.h"
-#include "kernel.h"
 
-void block_split(Block* block, size_t size) {
-    size_t size_rest = get_size_curr(block) - size;
-    if (size_rest >= BLOCK_STRUCT_SIZE) {
+Block* block_split(Block *block, size_t size)
+{
+    assert(block_get_size_curr(block) >= size);
+    Block* block_r;
+    size_t size_rest;
+
+    size_rest = block_get_size_curr(block) - size;
+    if (size_rest >= BLOCK_STRUCT_SIZE + BLOCK_SIZE_MIN) {
         size_rest -= BLOCK_STRUCT_SIZE;
-
-        bool is_first = get_first_block(block);
-        bool is_last = get_last_block(block);
-
-        set_size_curr(block, size);
+        bool is_first = block_get_flag_first(block);
+        bool is_last = block_get_flag_last(block);
+        block_set_size_curr(block, size);
+        block_set_flag_busy(block);
         if (is_first) {
-            set_first_block(block);
+            block_set_flag_first(block);
         }
-
-        Block* block_r = block_next(block);
-        set_size_curr(block_r, size_rest);
-        set_size_prev(block_r, size);
-
+        block_r = block_next(block);
+        block_set_size_curr(block_r, size_rest);
+        block_set_size_prev(block_r, size);
         if (is_last) {
-            clr_last_block(block);
-            set_last_block(block_r);
+            block_clr_flag_last(block);
+            block_set_flag_last(block_r);
+        } else {
+            block_set_size_prev(block_next(block_r), size_rest);
         }
-
-        set_flag_busy(block);
+        return block_r;
     }
+    return NULL;
 }
-void block_merge(Block* block, Block* block_r) {
+
+void
+block_merge(Block *block, Block *block_r)
+{
+    assert(block_get_flag_busy(block_r) == false);
+    assert(block_next(block) == block_r);
+
     size_t size;
+    bool is_first = block_get_flag_first(block);
+    bool is_last = block_get_flag_last(block_r);
+    size = block_get_size_curr(block) + block_get_size_curr(block_r) + BLOCK_STRUCT_SIZE;
 
-    bool is_first = get_first_block(block);
-
-    size = get_size_curr(block) + get_size_curr(block_r) + BLOCK_STRUCT_SIZE;
-
-    set_size_curr(block, size);
+    block_set_size_curr(block, size);
     if (is_first) {
-        set_first_block(block);
+        block_set_flag_first(block);
     }
 
-    if (get_last_block(block_r)) {
-        set_last_block(block);
+    if (is_last) {
+        block_set_flag_last(block);
     } else {
-        set_size_prev(block_next(block_r), size);
+        block_set_size_prev(block_next(block_r), size);
     }
 }

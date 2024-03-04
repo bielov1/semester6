@@ -1,10 +1,9 @@
 #include <stddef.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "allocator.h"
 #include "tester.h"
-
 
 struct T {
     void *ptr;
@@ -40,7 +39,8 @@ buf_alloc(size_t size)
     return ptr;
 }
 
-void tester(const bool verbose)
+void
+tester(const bool verbose)
 {
     const size_t t_NUM = 100;
     const size_t SZ_MIN = 1;

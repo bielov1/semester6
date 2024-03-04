@@ -1,108 +1,136 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+
 #include "allocator.h"
 #include "block.h"
+#include "config.h"
 #include "allocator_impl.h"
 #include "kernel.h"
 
-#define ARENA_SIZE (ALLOCATOR_PAGE_SIZE * DEF_ARENA_SIZE)
+#define ARENA_SIZE (ALLOCATOR_ARENA_PAGES * ALLOCATOR_PAGE_SIZE)
 #define BLOCK_SIZE_MAX (ARENA_SIZE - BLOCK_STRUCT_SIZE)
 
-static Block* Arena = NULL;
-static block_tree_t tree = TREE_INITIALIZER;
+static tree_type blocks_tree = TREE_INITIALIZER;
 
-static int arena_alloc(void) {
-    Arena = kernel_alloc(ARENA_SIZE);
-    if (Arena != NULL) {
-        initArena(&tree, Arena, ARENA_SIZE - BLOCK_STRUCT_SIZE);
-        return 0;
-    }
-    return -1;
+static Block* arena_alloc(void) {
+    Block *block;
+    block = kernel_alloc(ARENA_SIZE);
+    if (block != NULL)
+        arena_init(block, ARENA_SIZE - BLOCK_STRUCT_SIZE);
+    return block;
+}
+
+static void tree_add_block(Block* block) {
+    assert(block_get_flag_busy(block) == false);
+    tree_add(&blocks_tree, block_to_node(block), block_get_size_curr(block));
+}
+
+static void tree_remove_block(Block* block) {
+    assert(block_get_flag_busy(block) == false);
+    tree_remove(&blocks_tree, block_to_node(block));
 }
 
 void* mem_alloc(size_t size) {
-    Block* block;
-    if (Arena == NULL) {
-        if (arena_alloc() < 0) {
-            return NULL;
-        }
-    }
+
+    Block *block, *block_r;
+    tree_node_type *node;
 
     if (size > BLOCK_SIZE_MAX) return NULL;
 
+    if (size < BLOCK_SIZE_MIN) {
+        size = BLOCK_SIZE_MIN; //64
+    }
+
     size_t aligned_size = ROUND_BYTES(size);
-    // for (block = Arena ;; block = block_next(block)) {
-    //     if (!get_flag_busy(block) && get_size_curr(block) >= aligned_size) {
-    //         block_split(block, aligned_size);
-    //         return block_to_payload(block);
-    //     }
-    //     if (get_last_block(block)) break;
-    // }
-    block_node_t *node = tree_find_best(&tree, aligned_size);
-    block_node_t *node_r = block_to_node(Arena);
-    printf("Arena to node - %p\n", (char*)Arena + BLOCK_STRUCT_SIZE - 16);
-    printf("2Arena to node - %p\n", node_r);
-    block = node_to_block(node);
-    printf("node to Arena - %p\n", (char*)node - BLOCK_STRUCT_SIZE + 16);
-    printf("2node to Arena - %p\n", block);
-    return NULL;
+
+    node = tree_find_best(&blocks_tree, aligned_size);
+
+    if (node == NULL) {
+        block = arena_alloc();
+        if (block == NULL) {
+            return NULL;
+        }
+    } else {
+        tree_remove(&blocks_tree, node);
+        block = node_to_block(node);
+    }
+
+    block_r = block_split(block, aligned_size);
+    if (block_r != NULL) {
+        tree_add_block(block_r);
+    }
+    return block_to_payload(block);
+}
+
+static void show_node(const tree_node_type *node, const bool linked) {
+    Block* block = node_to_block(node);
+    printf("[%20p] %10zu %10zu %s %s %s %s\n", (void*)block,
+    block_get_size_curr(block),
+    block_get_size_prev(block),
+    block_get_flag_busy(block) ? "busy" : "free",
+    block_get_flag_first(block) ? "first" : "",
+    block_get_flag_last(block) ? "last" : "",
+    linked ? "linked" : "");
 }
 
 void mem_show(const char *msg) {
-    Block* block;
     printf("%s:\n", msg);
-    if (Arena == NULL) {
-        printf("Arena was not created\n");
-        return;
-    }
-    for (block = Arena ;; block=block_next(block)) {
-        printf("[%20p] %10zu %10zu %s %s %s\n", (void*)block,
-            get_size_curr(block),
-            get_size_prev(block),
-            get_flag_busy(block) ? "busy" : "free",
-            get_first_block(block) ? "first" : "",
-            get_last_block(block) ? "last" : "");
-        if (get_last_block(block)) break;
+    if (tree_is_empty(&blocks_tree)) {
+        printf("Tree is empty\n");
+    } else {
+        tree_walk(&blocks_tree, show_node);
     }
 }
 
-void mem_free(void* ptr) {
-    Block* block, *block_r, *block_l;
+void mem_free(void *ptr) {
+    Block *block, *block_r, *block_l;
 
-    if (ptr == NULL) return;
+    if (ptr == NULL) {
+        return;
+    }
 
-    block = payload_to_block(ptr); // IMPORTANT
-    release_flag_busy(block);      //
-    if (!get_last_block(block)) {
+    block = payload_to_block(ptr);
+    block_clr_flag_busy(block);
+
+
+    if (!block_get_flag_last(block)) {
         block_r = block_next(block);
-        if (!get_flag_busy(block_r)) {
+        if (!block_get_flag_busy(block_r)) {
+            tree_remove_block(block_r);
             block_merge(block, block_r);
         }
     }
 
-    if (!get_first_block(block)) {
+    if (!block_get_flag_first(block)) {
         block_l = block_prev(block);
-        if (!get_flag_busy(block_l)) {
+        if (!block_get_flag_busy(block_l) && block_l) {
+            tree_remove_block(block_l);
             block_merge(block_l, block);
+            block = block_l;
         }
+    }
+
+    if (block_get_flag_first(block) && block_get_flag_last(block)) {
+        kernel_free(block, ARENA_SIZE);
+    } else {
+        // TODO check possible memory reset
+        // [@@@@                                     ]
+        //      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        //         |         |         |         |   =======>
+        //         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        //         ^ ptr ------------------------>
+        //                        size
+        //              kernel_reset(ptr, size)
+        tree_add_block(block);
     }
 }
 
-
-// |###[              ]###[                ]###[                    ]\                   \| (1)
-
-// |###[      ]\      \###[                ]###[                    ]\                   \| (2)
-
-// |###[      ]###[                ]###[                    ]\                           \| (3)
-
-
-// \             \ - is a block, but without a header, and it is free
-
-// |###[               ]\                                                                \|
-
 void* mem_realloc(void* ptr, size_t size) {
-    if (ptr == NULL) {
+    (void)ptr;
+    (void)size;
+    return NULL;
+/*    if (ptr == NULL) {
         return NULL;
     }
 
@@ -152,4 +180,5 @@ void* mem_realloc(void* ptr, size_t size) {
     }
 
     return ptr;
+*/
 }

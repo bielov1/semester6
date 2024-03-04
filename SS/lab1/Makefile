@@ -10,7 +10,7 @@ run: main
 	./main
 
 main: $(SRC)
-	$(CC) $(CFLAGS) -o main -DDEBUGER $(SRC)
+	$(CC) $(CFLAGS) -o main $(SRC)
 
 clean:
 	rm -f main
