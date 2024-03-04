@@ -61,6 +61,7 @@ void* mem_alloc(size_t size) {
     if (block_r != NULL) {
         tree_add_block(block_r);
     }
+
     return block_to_payload(block);
 }
 

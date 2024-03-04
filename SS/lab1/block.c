@@ -40,9 +40,7 @@ block_merge(Block *block, Block *block_r)
     size = block_get_size_curr(block) + block_get_size_curr(block_r) +
     BLOCK_STRUCT_SIZE;
     block_set_size_curr(block, size);
-    if (block->size_prev == 0) {
-        block_set_flag_first(block);
-    }
+
     if (block_get_flag_last(block_r)) {
         block_set_flag_last(block);
     }

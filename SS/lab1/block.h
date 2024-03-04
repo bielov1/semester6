@@ -10,7 +10,7 @@ typedef struct {
     size_t size_curr;
     size_t size_prev;
     //bool flag_busy;
-    bool flag_first;
+    //bool flag_first;
     //bool flag_last;
 } Block;
 
@@ -73,7 +73,6 @@ static inline void
 block_set_flag_busy(Block *block)
 {
     block->size_curr |= BLOCK_OCCUPIED;
-    //block->flag_busy = true;
 }
 
 static inline bool
@@ -88,37 +87,29 @@ block_clr_flag_busy(Block *block)
     block->size_curr &= ~(BLOCK_OCCUPIED);
 }
 
-static inline void
-block_set_flag_first(Block *block)
-{
-    block->flag_first = true;
-}
 
 static inline bool
 block_get_flag_first(const Block *block)
 {
-    return block->flag_first;
+    return (block->size_prev == 0) ? true : false;
 }
 
 static inline void
 block_set_flag_last(Block *block)
 {
     block->size_curr |= BLOCK_LAST;
-    //block->flag_last = true;
 }
 
 static inline bool
 block_get_flag_last(const Block *block)
 {
     return (block->size_curr & BLOCK_LAST) != 0;
-    //return block->flag_last;
 }
 
 static inline void
 block_clr_flag_last(Block *block)
 {
     block->size_curr &= ~(BLOCK_LAST);
-    //block->flag_last = false;
 }
 
 static inline Block *
@@ -140,16 +131,12 @@ arena_init(Block *block, size_t size)
 {
     block->size_curr = size;
     block->size_prev = 0;
-    block_set_flag_first(block);
-    //block->flag_first = true;
     block_set_flag_last(block);
-    //block->flag_last = true;
 }
 
 static inline void
 block_init(Block *block)
 {
     block_clr_flag_busy(block);
-    block->flag_first = false;
     block_clr_flag_last(block);
 }
