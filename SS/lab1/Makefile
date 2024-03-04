@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pedantic -ggdb
+CFLAGS = -Wall -Wconversion -Wextra -pedantic -ggdb
 
 
 SRC = main.c allocator.c block.c kernel.c tester.c ./avl/avl.c
@@ -13,4 +13,4 @@ main: $(SRC)
 	$(CC) $(CFLAGS) -o main $(SRC)
 
 clean:
-	rm -f main
+	rm -rf ./main

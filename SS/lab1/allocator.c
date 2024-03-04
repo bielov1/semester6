@@ -16,8 +16,9 @@ static tree_type blocks_tree = TREE_INITIALIZER;
 static Block* arena_alloc(void) {
     Block *block;
     block = kernel_alloc(ARENA_SIZE);
-    if (block != NULL)
+    if (block != NULL) {
         arena_init(block, ARENA_SIZE - BLOCK_STRUCT_SIZE);
+    }
     return block;
 }
 
@@ -29,10 +30,10 @@ static void tree_add_block(Block* block) {
 static void tree_remove_block(Block* block) {
     assert(block_get_flag_busy(block) == false);
     tree_remove(&blocks_tree, block_to_node(block));
+
 }
 
 void* mem_alloc(size_t size) {
-
     Block *block, *block_r;
     tree_node_type *node;
 
@@ -45,12 +46,12 @@ void* mem_alloc(size_t size) {
     size_t aligned_size = ROUND_BYTES(size);
 
     node = tree_find_best(&blocks_tree, aligned_size);
-
     if (node == NULL) {
         block = arena_alloc();
         if (block == NULL) {
             return NULL;
         }
+
     } else {
         tree_remove(&blocks_tree, node);
         block = node_to_block(node);
@@ -91,20 +92,24 @@ void mem_free(void *ptr) {
     }
 
     block = payload_to_block(ptr);
+    if (block == NULL) {
+        return;
+    }
     block_clr_flag_busy(block);
-
 
     if (!block_get_flag_last(block)) {
         block_r = block_next(block);
+        if (block_r == NULL) {
+            return;
+        }
         if (!block_get_flag_busy(block_r)) {
             tree_remove_block(block_r);
             block_merge(block, block_r);
         }
     }
-
     if (!block_get_flag_first(block)) {
         block_l = block_prev(block);
-        if (!block_get_flag_busy(block_l) && block_l) {
+        if (!block_get_flag_busy(block_l)) {
             tree_remove_block(block_l);
             block_merge(block_l, block);
             block = block_l;
