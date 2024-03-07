@@ -12,8 +12,6 @@ Block* block_split(Block *block, size_t size)
     if (size_rest >= BLOCK_STRUCT_SIZE + BLOCK_SIZE_MIN) {
         size_rest -= BLOCK_STRUCT_SIZE;
         block_set_size_curr(block, size);
-        printf("block->size_curr = %zu\n", block->size_curr);
-        printf("block_get_size_curr(block) = %zu", block_get_size_curr(block));
         block_r = block_next(block);
         block_init(block_r);
         block_set_size_curr(block_r, size_rest);

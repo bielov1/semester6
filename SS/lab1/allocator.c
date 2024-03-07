@@ -56,12 +56,10 @@ void* mem_alloc(size_t size) {
         tree_remove(&blocks_tree, node);
         block = node_to_block(node);
     }
-
     block_r = block_split(block, aligned_size);
     if (block_r != NULL) {
         tree_add_block(block_r);
     }
-
     return block_to_payload(block);
 }
 
@@ -93,16 +91,10 @@ void mem_free(void *ptr) {
     }
 
     block = payload_to_block(ptr);
-    if (block == NULL) {
-        return;
-    }
     block_clr_flag_busy(block);
 
     if (!block_get_flag_last(block)) {
         block_r = block_next(block);
-        if (block_r == NULL) {
-            return;
-        }
         if (!block_get_flag_busy(block_r)) {
             tree_remove_block(block_r);
             block_merge(block, block_r);
@@ -132,59 +124,68 @@ void mem_free(void *ptr) {
     }
 }
 
-void* mem_realloc(void* ptr, size_t size) {
-    (void)ptr;
-    (void)size;
-    return NULL;
-/*    if (ptr == NULL) {
+void* mem_realloc(void* ptr1, size_t size) {
+    void *ptr2;
+    Block* block1, *block2, *block_r, *block_n;
+    size_t size_curr;
+
+    if (size > BLOCK_SIZE_MAX) {
         return NULL;
     }
-
-    if (size == 0) {
-        mem_free(ptr);
-        return NULL;
+    if (size < BLOCK_SIZE_MIN) {
+        size = BLOCK_SIZE_MIN;
     }
 
-    Block *block, *block_r, *block_rr, *block_rr_payload;
+    size = ROUND_BYTES(size);
 
-    if (size > BLOCK_SIZE_MAX) return NULL;
-
-    // if we passed not aligned size, then block_next() in mem_show()
-    // couldn't switch to next block correctly
-    // BLOCK_STRUCT_SIZE = 16
-    size_t aligned_size = ROUND_BYTES(size);
-
-    block = payload_to_block(ptr);
-    // Зменшуємо блок in-place
-    if (get_size_curr(block) > aligned_size) {
-        block_split(block, aligned_size);
-        block_r = block_next(block);
-        block_rr = block_next(block_r);
-        set_size_prev(block_rr, get_size_curr(block_r));
-        return block_to_payload(block);
+    if (ptr1 == NULL) {
+        return mem_alloc(size);
     }
-    // Збільшуємо блок in-place
-    if (get_size_curr(block) < aligned_size) {
-        block_r = block_next(block);
-        if (!get_flag_busy(block_r)) {
-            size_t total_size = get_size_curr(block) + get_size_curr(block_r);
-            if (total_size > aligned_size) {
-                block_merge(block, block_r);
-                block_split(block, aligned_size);
-                return block_to_payload(block);
+    block1 = payload_to_block(ptr1);
+    size_curr = block_get_size_curr(block1);
+    if (size == size_curr) {
+        return ptr1;
+    }
+
+    //зменшуємо
+    if (size < size_curr) {
+        block_r = block_split(block1, size);
+        if (block_r != NULL) {
+            block_n = block_next(block_r);
+            if (!block_get_flag_busy(block_n)) {
+                tree_remove_block(block_n);
+                block_merge(block_r, block_n);
+            }
+
+            tree_add_block(block_r);
+        }
+        return block_to_payload(block1);
+    }
+
+    //збільшуємо
+    if (size > size_curr) {
+        if (!block_get_flag_last(block1)) {
+            block_r = block_next(block1);
+            if (!block_get_flag_busy(block_r)) {
+                size_t total_size = size_curr + block_get_size_curr(block_r) + BLOCK_STRUCT_SIZE;
+                if (total_size >= size) {
+                    tree_remove_block(block_r);
+                    block_merge(block1, block_r);
+                    block_n = block_split(block1, size);
+                    if (block_n != NULL) {
+                        tree_add_block(block_n);
+                    }
+                    return block_to_payload(block1);
+                }
             }
         }
 
-        block_rr = mem_alloc(aligned_size);
-        if (block_rr == NULL) {
-            return NULL;
+        ptr2 = mem_alloc(size);
+        if (ptr2 != NULL) {
+            memcpy(ptr2, ptr1, size_curr);
+            mem_free(ptr1);
         }
-        memcpy(block_rr, block_to_payload(block), aligned_size);
-        mem_free(block_to_payload(block));
-
-        return block_rr;
+        return ptr2;
     }
 
-    return ptr;
-*/
 }
