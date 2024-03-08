@@ -23,8 +23,11 @@ static void * buf_alloc(size_t size)
 
 int main(void)
 {
-    // void *ptr1, *ptr2, *ptr3, *ptr4, *ptr5;
-    // ptr1 = buf_alloc(1);
+    void *ptr1, *ptr2, *ptr3, *ptr4, *ptr5;
+    ptr1 = buf_alloc(1);
+    mem_show("alloc(1)");
+    ptr2 = buf_alloc(70000);
+    mem_show("alloc(70000)");
     // ptr2 = buf_alloc(455);
     // ptr3 = buf_alloc(2);
     // ptr4 = buf_alloc(88);
@@ -39,5 +42,5 @@ int main(void)
     // mem_realloc(ptr5, 20);
     // mem_show("realloc ptr5 -> 20");
     // srand(time(NULL));
-    tester(true);
+    // tester(true);
 }

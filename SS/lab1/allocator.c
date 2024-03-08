@@ -37,14 +37,23 @@ void* mem_alloc(size_t size) {
     Block *block, *block_r;
     tree_node_type *node;
 
-    if (size > BLOCK_SIZE_MAX) return NULL;
+    // NOT WORKING!!
+    if (size > BLOCK_SIZE_MAX) {
+        size_t arena_size = ROUND_BYTES(size);
+        block = kernel_alloc(arena_size);
+        if (block != NULL) {
+            arena_init(block, arena_size - BLOCK_STRUCT_SIZE);
+            tree_add_block(block);
+        } else {
+            return NULL;
+        }
+        return block_to_payload(block);
+    }
 
     if (size < BLOCK_SIZE_MIN) {
         size = BLOCK_SIZE_MIN; //64
     }
-
     size_t aligned_size = ROUND_BYTES(size);
-
     node = tree_find_best(&blocks_tree, aligned_size);
     if (node == NULL) {
         block = arena_alloc();
@@ -179,13 +188,12 @@ void* mem_realloc(void* ptr1, size_t size) {
                 }
             }
         }
-
-        ptr2 = mem_alloc(size);
-        if (ptr2 != NULL) {
-            memcpy(ptr2, ptr1, size_curr);
-            mem_free(ptr1);
-        }
-        return ptr2;
     }
 
+    ptr2 = mem_alloc(size);
+    if (ptr2 != NULL) {
+        memcpy(ptr2, ptr1, size_curr);
+        mem_free(ptr1);
+    }
+    return ptr2;
 }
