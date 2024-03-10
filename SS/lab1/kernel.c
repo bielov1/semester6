@@ -51,8 +51,7 @@ kernel_alloc(size_t size)
 #else
 # error "Do not know how to get anonymous memory"
 #endif
-    ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MMAP_FLAG_ANON|MAP_PRIVATE,
-        -1, 0);
+    ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MMAP_FLAG_ANON|MAP_PRIVATE, -1, 0);
     if (ptr == MAP_FAILED) {
         if (errno == ENOMEM)
             return NULL;

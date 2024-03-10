@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <limits.h>
 
 #include "allocator.h"
 #include "block.h"
@@ -13,11 +16,19 @@
 
 static tree_type blocks_tree = TREE_INITIALIZER;
 
-static Block* arena_alloc(void) {
+static Block* arena_alloc(size_t size) {
     Block *block;
-    block = kernel_alloc(ARENA_SIZE);
-    if (block != NULL) {
-        arena_init(block, ARENA_SIZE - BLOCK_STRUCT_SIZE);
+
+    if (size > BLOCK_SIZE_MAX) {
+        block = kernel_alloc(size);
+        if (block != NULL) {
+            arena_init(block, size - BLOCK_STRUCT_SIZE);
+        }
+    } else {
+        block = kernel_alloc(ARENA_SIZE);
+        if (block != NULL) {
+            arena_init(block, ARENA_SIZE - BLOCK_STRUCT_SIZE);
+        }
     }
     return block;
 }
@@ -37,16 +48,13 @@ void* mem_alloc(size_t size) {
     Block *block, *block_r;
     tree_node_type *node;
 
-    // NOT WORKING!!
     if (size > BLOCK_SIZE_MAX) {
-        size_t arena_size = ROUND_BYTES(size);
-        block = kernel_alloc(arena_size);
-        if (block != NULL) {
-            arena_init(block, arena_size - BLOCK_STRUCT_SIZE);
-            tree_add_block(block);
-        } else {
+        if (size > SIZE_MAX - (ALIGN - 1)) {
+            // переповнення
             return NULL;
         }
+        size_t arena_size = (ROUND_BYTES(size) / ALLOCATOR_PAGE_SIZE) * ALLOCATOR_PAGE_SIZE + BLOCK_STRUCT_SIZE;
+        block = arena_alloc(arena_size);
         return block_to_payload(block);
     }
 
@@ -56,7 +64,7 @@ void* mem_alloc(size_t size) {
     size_t aligned_size = ROUND_BYTES(size);
     node = tree_find_best(&blocks_tree, aligned_size);
     if (node == NULL) {
-        block = arena_alloc();
+        block = arena_alloc(aligned_size);
         if (block == NULL) {
             return NULL;
         }
@@ -102,34 +110,32 @@ void mem_free(void *ptr) {
     block = payload_to_block(ptr);
     block_clr_flag_busy(block);
 
-    if (!block_get_flag_last(block)) {
-        block_r = block_next(block);
-        if (!block_get_flag_busy(block_r)) {
-            tree_remove_block(block_r);
-            block_merge(block, block_r);
-        }
-    }
-    if (!block_get_flag_first(block)) {
-        block_l = block_prev(block);
-        if (!block_get_flag_busy(block_l)) {
-            tree_remove_block(block_l);
-            block_merge(block_l, block);
-            block = block_l;
-        }
-    }
-
-    if (block_get_flag_first(block) && block_get_flag_last(block)) {
-        kernel_free(block, ARENA_SIZE);
+    if (block_get_size_curr(block) > BLOCK_SIZE_MAX) {
+        kernel_free(block, block_get_size_curr(block) + BLOCK_STRUCT_SIZE);
     } else {
-        // TODO check possible memory reset
-        // [@@@@                                     ]
-        //      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        //         |         |         |         |   =======>
-        //         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        //         ^ ptr ------------------------>
-        //                        size
-        //              kernel_reset(ptr, size)
-        tree_add_block(block);
+
+        if (!block_get_flag_last(block)) {
+            block_r = block_next(block);
+            if (!block_get_flag_busy(block_r)) {
+                tree_remove_block(block_r);
+                block_merge(block, block_r);
+            }
+        }
+        if (!block_get_flag_first(block)) {
+            block_l = block_prev(block);
+            if (!block_get_flag_busy(block_l)) {
+                tree_remove_block(block_l);
+                block_merge(block_l, block);
+                block = block_l;
+            }
+        }
+
+        if (block_get_flag_first(block) && block_get_flag_last(block)) {
+            kernel_free(block, ARENA_SIZE);
+        } else {
+            block_dontneed(block);
+            tree_add_block(block);
+        }
     }
 }
 
@@ -138,9 +144,6 @@ void* mem_realloc(void* ptr1, size_t size) {
     Block* block1, *block2, *block_r, *block_n;
     size_t size_curr;
 
-    if (size > BLOCK_SIZE_MAX) {
-        return NULL;
-    }
     if (size < BLOCK_SIZE_MIN) {
         size = BLOCK_SIZE_MIN;
     }
@@ -152,21 +155,32 @@ void* mem_realloc(void* ptr1, size_t size) {
     }
     block1 = payload_to_block(ptr1);
     size_curr = block_get_size_curr(block1);
+
+    if (size_curr > BLOCK_SIZE_MAX) {
+        if (size == size_curr) {
+            return ptr1;
+        }
+
+        goto move_large_block;
+    }
+
     if (size == size_curr) {
         return ptr1;
     }
 
     //зменшуємо
     if (size < size_curr) {
-        block_r = block_split(block1, size);
-        if (block_r != NULL) {
-            block_n = block_next(block_r);
-            if (!block_get_flag_busy(block_n)) {
-                tree_remove_block(block_n);
-                block_merge(block_r, block_n);
-            }
+        if (!block_get_flag_last(block1)) {
+            block_r = block_split(block1, size);
+            if (block_r != NULL) {
+                block_n = block_next(block_r);
+                if (!block_get_flag_busy(block_n)) {
+                    tree_remove_block(block_n);
+                    block_merge(block_r, block_n);
+                }
 
-            tree_add_block(block_r);
+                tree_add_block(block_r);
+            }
         }
         return block_to_payload(block1);
     }
@@ -190,9 +204,10 @@ void* mem_realloc(void* ptr1, size_t size) {
         }
     }
 
+move_large_block:
     ptr2 = mem_alloc(size);
     if (ptr2 != NULL) {
-        memcpy(ptr2, ptr1, size_curr);
+        memcpy(ptr2, ptr1, size_curr < size ? size_curr : size);
         mem_free(ptr1);
     }
     return ptr2;

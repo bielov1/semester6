@@ -9,6 +9,7 @@
 typedef struct {
     size_t size_curr;
     size_t size_prev;
+    size_t offset;
     //bool flag_busy;
     //bool flag_first;
     //bool flag_last;
@@ -19,6 +20,8 @@ typedef struct {
 
 Block *block_split(Block *, size_t);
 void block_merge(Block *, Block *);
+void block_dontneed(Block *);
+
 
 static inline void *
 block_to_payload(const Block *block)
@@ -112,6 +115,14 @@ block_clr_flag_last(Block *block)
     block->size_curr &= ~(BLOCK_LAST);
 }
 
+static inline void block_set_offset(Block* block, size_t offset) {
+    block->offset = offset;
+}
+
+static inline size_t block_get_offset(Block* block) {
+    return block->offset;
+}
+
 static inline Block *
 block_next(const Block *block)
 {
@@ -131,6 +142,7 @@ arena_init(Block *block, size_t size)
 {
     block->size_curr = size;
     block->size_prev = 0;
+    block->offset = 0;
     block_set_flag_last(block);
 }
 
