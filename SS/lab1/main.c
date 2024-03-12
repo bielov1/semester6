@@ -27,14 +27,19 @@ static void * buf_alloc(size_t size)
 
 int main(void)
 {
-    // void *ptr1, *ptr2;
+
+    // void *ptr1, *ptr2, *ptr3, *ptr4;
     // ptr1 = mem_alloc(90000);
     // ptr2 = mem_alloc(1);
+    // ptr3 = mem_alloc(9000);
+    // ptr4 = mem_alloc(431);
     // mem_show("allocs");
-    // mem_realloc(ptr1, 80000);
-    // mem_show("free ptr1");
-
+    // ptr1 = mem_realloc(ptr1, 80000);
+    // mem_show("realloc ptr1 -> 80000");
     // mem_free(ptr1);
+    // mem_show("free ptr1");
+    // mem_realloc(ptr4, 999);
+    // mem_show("realloc ptr4 -> 999");
     srand(time(NULL));
     tester(true);
 }

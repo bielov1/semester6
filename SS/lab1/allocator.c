@@ -180,9 +180,9 @@ void* mem_realloc(void* ptr1, size_t size) {
                 }
 
                 tree_add_block(block_r);
+                return block_to_payload(block1);
             }
         }
-        return block_to_payload(block1);
     }
 
     //збільшуємо
